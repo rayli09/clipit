@@ -39,7 +39,7 @@ def convert_to_mp3(input_file: str, output_file: str):
     import subprocess
 
     cmd = f"ffmpeg -i {input_file} -ab 128k -ac 1 -ar 16000 {output_file}"
-    subprocess.run(cmd.split(), check=True)
+    subprocess.run(cmd.split(), check=True, shell=True)
     pass
 
 
