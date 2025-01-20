@@ -94,9 +94,12 @@ class VideoProcessor:
     def convert_to_mp3(self, input_file: str, output_file: str) -> None:
         """Convert video file to MP3 format"""
         try:
-            # ffmpeg -i input-video.avi -vn -acodec copy output-audio.aac
-            cmd = f'ffmpeg -i "{input_file}" -vn -acodec copy "{output_file}"'
-            # cmd = f'ffmpeg -i "{input_file}" {output_file}'
+            # Create output directory if it doesn't exist
+            output_path = Path(output_file)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Use -vn to skip video and -acodec libmp3lame for MP3 encoding
+            cmd = f'ffmpeg -i "{input_file}" -vn -acodec libmp3lame "{output_file}"'
             subprocess.run(cmd, check=True, capture_output=True, shell=True)
         except subprocess.CalledProcessError as e:
             raise VideoProcessingError(
@@ -109,11 +112,12 @@ class VideoProcessor:
             raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
         try:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
             pipe = pipeline(
                 "automatic-speech-recognition",
                 model="openai/whisper-large-v3-turbo",
-                torch_dtype=torch.float16,
-                device="cuda:0",
+                torch_dtype=torch.int8,
+                device=device,
                 model_kwargs={
                     "attn_implementation": "flash_attention_2"
                     if is_flash_attn_2_available()
@@ -124,7 +128,7 @@ class VideoProcessor:
             outputs = pipe(
                 audio_path,
                 chunk_length_s=30,
-                batch_size=24,
+                batch_size=1,
                 return_timestamps=True,
             )
 
